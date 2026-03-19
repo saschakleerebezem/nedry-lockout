@@ -2,6 +2,8 @@ import sys
 import time
 import shutil
 import signal
+import threading
+import subprocess
 
 running = True
 alt_screen = False
@@ -18,9 +20,11 @@ PROMPTS = 3
 LOCK_LINE = "YOU DIDN'T SAY THE MAGIC WORD!"
 
 IS_WINDOWS = sys.platform.startswith("win")
+IS_MAC = sys.platform == "darwin"
 
 if IS_WINDOWS:
     import msvcrt
+    import winsound
 else:
     import termios
     import tty
@@ -156,6 +160,79 @@ def get_key_nonblocking():
     return sys.stdin.read(1)
 
 
+def play_mac_sound(sound_name: str) -> None:
+    path = f"/System/Library/Sounds/{sound_name}.aiff"
+    try:
+        subprocess.Popen(
+            ["afplay", path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
+
+
+def play_denied_sound() -> None:
+    try:
+        if IS_WINDOWS:
+            winsound.Beep(980, 70)
+            time.sleep(0.03)
+            winsound.Beep(720, 180)
+        elif IS_MAC:
+            # More Mac-like than terminal bell
+            play_mac_sound("Basso")
+        else:
+            write("\a")
+            time.sleep(0.05)
+            write("\a")
+    except Exception:
+        pass
+
+
+def play_lockout_start_sound() -> None:
+    try:
+        if IS_WINDOWS:
+            winsound.Beep(980, 70)
+            time.sleep(0.03)
+            winsound.Beep(720, 180)
+        elif IS_MAC:
+            play_mac_sound("Basso")
+        else:
+            write("\a")
+            time.sleep(0.05)
+            write("\a")
+    except Exception:
+        pass
+
+
+def play_background_alarm() -> None:
+    repeats = 7
+    interval = 0.45
+
+    for _ in range(repeats):
+        if not running:
+            return
+
+        try:
+            if IS_WINDOWS:
+                winsound.Beep(420, 140)
+            elif IS_MAC:
+                play_mac_sound("Ping")
+            else:
+                write("\a")
+        except Exception:
+            pass
+
+        end_time = time.monotonic() + interval
+        while running and time.monotonic() < end_time:
+            time.sleep(0.02)
+
+
+def start_background_alarm_thread() -> None:
+    t = threading.Thread(target=play_background_alarm, daemon=True)
+    t.start()
+
+
 def read_user_line(row: int, cols: int, left: int = 2) -> str:
     buf = []
     usable = max(1, cols - left + 1)
@@ -234,6 +311,7 @@ def draw_input_phase() -> int:
             response = "access: PERMISSION DENIED."
 
         blue_text_line(row, response, cols, left)
+        play_denied_sound()
         row += 2
 
     return row
@@ -259,6 +337,9 @@ def draw_wall_phase(start_row: int) -> None:
     current_row = top
 
     set_scroll_region(top, bottom)
+
+    play_lockout_start_sound()
+    start_background_alarm_thread()
 
     while running:
         size = shutil.get_terminal_size(fallback=(80, 24))
