@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: nedry-lockout
+Version: 0.1.0
+Summary: Jurassic Park style terminal lockout animation
+Author-email: Sascha Kleerebezem <saschakleerebezem@gmail.com>
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# nedry-lockout
+
+Jurassic Park style terminal lockout animation.
+
+## Install locally
+
+```bash
+python3 -m pip install .

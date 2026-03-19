@@ -1,0 +1,2 @@
+[console_scripts]
+nedry = nedry.main:main
