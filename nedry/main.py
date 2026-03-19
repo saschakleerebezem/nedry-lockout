@@ -24,6 +24,7 @@ if IS_WINDOWS:
 else:
     import termios
     import tty
+    import select
 
 
 def write(s: str) -> None:
@@ -121,7 +122,9 @@ class RawInput:
         if not IS_WINDOWS:
             self.fd = sys.stdin.fileno()
             self.old = termios.tcgetattr(self.fd)
+
             tty.setcbreak(self.fd)
+
             new = termios.tcgetattr(self.fd)
             new[3] = new[3] & ~(termios.ECHO)
             termios.tcsetattr(self.fd, termios.TCSADRAIN, new)
@@ -132,13 +135,24 @@ class RawInput:
             termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old)
 
 
-def get_key() -> str:
+def get_key_nonblocking():
     if IS_WINDOWS:
+        if not msvcrt.kbhit():
+            return None
+
         ch = msvcrt.getwch()
+
         if ch in ("\x00", "\xe0"):
-            msvcrt.getwch()
-            return ""
+            if msvcrt.kbhit():
+                msvcrt.getwch()
+            return None
+
         return ch
+
+    rlist, _, _ = select.select([sys.stdin], [], [], 0)
+    if not rlist:
+        return None
+
     return sys.stdin.read(1)
 
 
@@ -146,22 +160,36 @@ def read_user_line(row: int, cols: int, left: int = 2) -> str:
     buf = []
     usable = max(1, cols - left + 1)
 
+    cursor_on = True
+    last_blink = time.monotonic()
+    blink_interval = 0.45
+
     while running:
+        now = time.monotonic()
+        if now - last_blink >= blink_interval:
+            cursor_on = not cursor_on
+            last_blink = now
+
         prefix = "> "
         current = "".join(buf)
-        painted = (prefix + current)[:usable].ljust(usable)
+        cursor = "_" if cursor_on else " "
+        painted = (prefix + current + cursor)[:usable].ljust(usable)
 
         move(row, left)
         write(BG_BLUE + FG_WHITE + painted + RESET)
 
-        ch = get_key()
-        if not ch:
+        ch = get_key_nonblocking()
+        if ch is None:
+            time.sleep(0.02)
             continue
 
         if ch == "\x03":
             raise KeyboardInterrupt
 
         if ch in ("\r", "\n"):
+            move(row, left)
+            final = (prefix + current)[:usable].ljust(usable)
+            write(BG_BLUE + FG_WHITE + final + RESET)
             return current
 
         if ch in ("\x08", "\x7f"):
@@ -171,6 +199,8 @@ def read_user_line(row: int, cols: int, left: int = 2) -> str:
 
         if ch.isprintable():
             buf.append(ch)
+
+    return "".join(buf)
 
 
 def draw_input_phase() -> int:
