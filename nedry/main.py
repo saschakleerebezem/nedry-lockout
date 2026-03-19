@@ -8,12 +8,14 @@ import subprocess
 running = True
 alt_screen = False
 cursor_hidden = False
+ORIGINAL_TITLE = "Terminal"
 
 LOCKOUT_DELAY = 0.35
 MAGIC_LINE_DELAY = 0.1
 
 BG_BLUE = "\x1b[44m"
 FG_WHITE = "\x1b[97m"
+FG_CURSOR = "\x1b[38;2;170;255;120m"
 RESET = "\x1b[0m"
 
 PROMPTS = 3
@@ -38,6 +40,10 @@ def write(s: str) -> None:
 
 def esc(code: str) -> str:
     return f"\x1b[{code}"
+
+
+def set_title(title: str) -> None:
+    write(f"\x1b]0;{title}\x07")
 
 
 def enter_alt_screen() -> None:
@@ -83,6 +89,7 @@ def reset_scroll_region() -> None:
 
 
 def cleanup() -> None:
+    set_title(ORIGINAL_TITLE)
     write(RESET)
     reset_scroll_region()
     show_cursor()
@@ -179,7 +186,6 @@ def play_denied_sound() -> None:
             time.sleep(0.03)
             winsound.Beep(720, 180)
         elif IS_MAC:
-            # More Mac-like than terminal bell
             play_mac_sound("Basso")
         else:
             write("\a")
@@ -233,49 +239,79 @@ def start_background_alarm_thread() -> None:
     t.start()
 
 
-def read_user_line(row: int, cols: int, left: int = 2) -> str:
-    buf = []
+def render_prompt_line(
+    row: int,
+    cols: int,
+    current: str,
+    left: int,
+    show_cursor: bool,
+) -> None:
     usable = max(1, cols - left + 1)
+    prefix = "> "
+    base = prefix + current
 
-    cursor_on = True
+    # Paint the whole input area blue first
+    move(row, left)
+    write(BG_BLUE + (" " * usable) + RESET)
+
+    # Draw the typed text at the real typing position
+    visible_text = base[:usable]
+    move(row, left)
+    write(BG_BLUE + FG_WHITE + visible_text + RESET)
+
+    # Draw the cursor immediately after the typed text
+    if show_cursor and len(base) < usable:
+        cursor_col = left + len(base)
+        move(row, cursor_col)
+        write(BG_BLUE + FG_CURSOR + "█" + RESET)
+
+
+def read_user_line(row: int, cols: int, left: int = 1) -> str:
+    buf = []
+
+    blink_on = True
     last_blink = time.monotonic()
     blink_interval = 0.45
+    solid_until = 0.0
 
     while running:
         now = time.monotonic()
-        if now - last_blink >= blink_interval:
-            cursor_on = not cursor_on
-            last_blink = now
 
-        prefix = "> "
-        current = "".join(buf)
-        cursor = "_" if cursor_on else " "
-        painted = (prefix + current + cursor)[:usable].ljust(usable)
+        if now < solid_until:
+            show_cursor = True
+        else:
+            if now - last_blink >= blink_interval:
+                blink_on = not blink_on
+                last_blink = now
+            show_cursor = blink_on
 
-        move(row, left)
-        write(BG_BLUE + FG_WHITE + painted + RESET)
+        render_prompt_line(row, cols, "".join(buf), left, show_cursor)
 
         ch = get_key_nonblocking()
         if ch is None:
-            time.sleep(0.02)
+            time.sleep(0.01)
             continue
 
         if ch == "\x03":
             raise KeyboardInterrupt
 
         if ch in ("\r", "\n"):
-            move(row, left)
-            final = (prefix + current)[:usable].ljust(usable)
-            write(BG_BLUE + FG_WHITE + final + RESET)
-            return current
+            render_prompt_line(row, cols, "".join(buf), left, False)
+            return "".join(buf)
 
         if ch in ("\x08", "\x7f"):
             if buf:
                 buf.pop()
+            solid_until = time.monotonic() + 2.0
+            blink_on = True
+            last_blink = time.monotonic()
             continue
 
         if ch.isprintable():
             buf.append(ch)
+            solid_until = time.monotonic() + 2.0
+            blink_on = True
+            last_blink = time.monotonic()
 
     return "".join(buf)
 
@@ -286,7 +322,7 @@ def draw_input_phase() -> int:
     size = shutil.get_terminal_size(fallback=(80, 24))
     cols = max(20, size.columns)
 
-    left = 2
+    left = 1
     row = 1
 
     blue_text_line(row, "Jurassic Park, System Security Interface", cols, left)
@@ -296,7 +332,7 @@ def draw_input_phase() -> int:
     row += 1
 
     blue_text_line(row, "Ready...", cols, left)
-    row += 2
+    row += 1
 
     for i in range(PROMPTS):
         if not running:
@@ -305,14 +341,23 @@ def draw_input_phase() -> int:
         _user_input = read_user_line(row, cols, left)
         row += 1
 
-        if i == PROMPTS - 1:
-            response = "access: PERMISSION DENIED....And..."
-        else:
-            response = "access: PERMISSION DENIED."
+        time.sleep(0.5)
 
-        blue_text_line(row, response, cols, left)
-        play_denied_sound()
-        row += 2
+        if i == PROMPTS - 1:
+            blue_text_line(row, "access: PERMISSION DENIED.", cols, left)
+            play_denied_sound()
+            time.sleep(0.5)
+            blue_text_line(
+                row,
+                "access: PERMISSION DENIED....And...",
+                cols,
+                left,
+            )
+        else:
+            blue_text_line(row, "access: PERMISSION DENIED.", cols, left)
+            play_denied_sound()
+
+        row += 1
 
     return row
 
@@ -366,6 +411,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, signal_handler)
 
     try:
+        set_title("Central Park Control Console")
         enter_alt_screen()
         hide_cursor()
 
