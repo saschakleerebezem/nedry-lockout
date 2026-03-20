@@ -7,11 +7,7 @@ A faithful recreation of the iconic
 
 ---
 
-## Quick Start
-
-Pick your platform and run the command.
-
----
+## Installation & Usage
 
 ## macOS
 
@@ -73,41 +69,11 @@ sudo pacman -Syu python
 
 ---
 
-## Windows (PowerShell)
-
-### First time (install Python)
-
-```powershell
-winget install --id Python.Python.3.12 --exact --source winget
-```
-
-Close PowerShell and open a new window.
-
-### Run
-
-```powershell
-py -m venv clean_test; .\clean_test\Scripts\Activate.ps1; py -m pip install --no-cache-dir --force-reinstall nedry-lockout; nedry
-```
-
-### If activation is blocked
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-### If `nedry` is not recognized
-
-```powershell
-py -m nedry.main
-```
-
----
-
 ## Notes
 
 - Requires Python 3.8+
-- Uses an isolated virtual environment (safe for all systems)
-- Works on macOS, Linux, Windows
+- Uses isolated virtual environment
+- Optimized for macOS and Linux terminals
 
 ---
 
@@ -119,9 +85,19 @@ py -m nedry.main
 python3 -m pip install --no-cache-dir --force-reinstall nedry-lockout
 ```
 
-### Windows: `py` not found
+### Steam Deck / Linux shell note
 
-Restart PowerShell after installing Python.
+Commands must be separated by new lines or `&&`.  
+Do not paste them as one plain space-separated line.
+
+Correct example:
+
+```bash
+python3 -m venv clean_test && \
+source clean_test/bin/activate && \
+pip install nedry-lockout && \
+nedry
+```
 
 ---
 
