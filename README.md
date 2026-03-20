@@ -2,93 +2,112 @@
 
 Jurassic Park–style terminal lockout animation.
 
-A faithful recreation of the iconic "YOU DIDN'T SAY THE MAGIC WORD!" sequence, including:
-- interactive command input
-- authentic timing and pacing
-- continuous lockout scroll
-- terminal title override
-- cross-platform support (macOS, Linux, Windows)
+A faithful recreation of the iconic  
+"YOU DIDN'T SAY THE MAGIC WORD!" sequence.
 
 ---
 
-## Installation & Usage
+## Quick Start
 
-### Universal (clean environment, recommended)
-
-Works on macOS and Linux, and any system with Python 3:
-
-rm -rf clean_test && \
-python3 -m venv clean_test && \
-source clean_test/bin/activate && \
-python3 -m pip install --no-cache-dir --force-reinstall nedry-lockout && \
-nedry
+Pick your platform and run the command.
 
 ---
 
 ## macOS
 
-### Option 1 — Quick run (no global install)
+### Run
 
-python3 -m venv clean_test
-source clean_test/bin/activate
-pip install nedry-lockout
+```bash
+rm -rf clean_test && \
+python3 -m venv clean_test && \
+source clean_test/bin/activate && \
+python3 -m pip install --no-cache-dir --force-reinstall nedry-lockout && \
 nedry
+```
 
-### Option 2 — Install once (if your Python allows it)
+### If Python is missing
 
-python3 -m pip install --user nedry-lockout
-nedry
-
-Note: Some macOS setups (Homebrew Python) block global installs.
-Use the virtual environment method if you see an "externally managed environment" error.
+```bash
+brew install python
+```
 
 ---
 
-## Linux
+## Linux (Ubuntu / Debian)
 
-### Quick run
+### Run
 
-python3 -m venv clean_test
-source clean_test/bin/activate
-pip install nedry-lockout
+```bash
+rm -rf clean_test && \
+python3 -m venv clean_test && \
+source clean_test/bin/activate && \
+python3 -m pip install --no-cache-dir --force-reinstall nedry-lockout && \
 nedry
+```
 
-### Alternative (if allowed)
+### If Python / venv is missing
 
-python3 -m pip install --user nedry-lockout
+```bash
+sudo apt update && sudo apt install -y python3 python3-venv
+```
+
+---
+
+## Linux (Arch / Steam Deck)
+
+### Run
+
+```bash
+rm -rf clean_test && \
+python3 -m venv clean_test && \
+source clean_test/bin/activate && \
+python3 -m pip install --no-cache-dir --force-reinstall nedry-lockout && \
 nedry
+```
+
+### If Python is missing
+
+```bash
+sudo pacman -Syu python
+```
 
 ---
 
 ## Windows (PowerShell)
 
-### Quick run (recommended)
+### First time (install Python)
 
-python -m venv clean_test
-clean_test\Scripts\activate
-pip install nedry-lockout
-nedry
+```powershell
+winget install --id Python.Python.3.12 --exact --source winget
+```
+
+Close PowerShell and open a new window.
+
+### Run
+
+```powershell
+py -m venv clean_test; .\clean_test\Scripts\Activate.ps1; py -m pip install --no-cache-dir --force-reinstall nedry-lockout; nedry
+```
+
+### If activation is blocked
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
 
 ### If `nedry` is not recognized
 
-python -m nedry.main
+```powershell
+py -m nedry.main
+```
 
 ---
 
 ## Notes
 
 - Requires Python 3.8+
-- No external dependencies
-- Works in most modern terminals:
-  - macOS Terminal / iTerm2
-  - Linux terminals
-  - Windows Terminal / PowerShell
-
-### Sound behavior
-
-- Windows: native beep via winsound
-- macOS: system sounds via afplay
-- Linux: terminal bell fallback (may depend on terminal settings)
+- Uses an isolated virtual environment (safe for all systems)
+- Works on macOS, Linux, Windows
 
 ---
 
@@ -96,17 +115,13 @@ python -m nedry.main
 
 ### Old version still runs
 
-Force reinstall:
-
+```bash
 python3 -m pip install --no-cache-dir --force-reinstall nedry-lockout
+```
 
-Or use a clean environment:
+### Windows: `py` not found
 
-rm -rf clean_test
-python3 -m venv clean_test
-source clean_test/bin/activate
-pip install nedry-lockout
-nedry
+Restart PowerShell after installing Python.
 
 ---
 
